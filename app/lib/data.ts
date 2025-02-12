@@ -25,7 +25,7 @@ export async function fetchRevenue() {
         console.log('Data fetch completed after 3 seconds.');
 
         client.release()
-        
+
         return data.rows;
     } catch (error) {
         console.error('Database Error:', error);
@@ -143,21 +143,26 @@ export async function fetchFilteredInvoices(
 
 export async function fetchInvoicesPages(query: string) {
     try {
-        const count = await sql`SELECT COUNT(*)
-                                FROM invoices
-                                         JOIN customers ON invoices.customer_id = customers.id
-                                WHERE customers.name ILIKE ${`%${query}%`}
-                                   OR
-                                    customers.email ILIKE ${`%${query}%`}
-                                   OR
-                                    invoices.amount::text ILIKE ${`%${query}%`}
-                                   OR
-                                    invoices.date::text ILIKE ${`%${query}%`}
-                                   OR
-                                    invoices.status ILIKE ${`%${query}%`}
+        const client = await sql.connect()
+
+        const count = await client.sql`SELECT COUNT(*)
+                                       FROM invoices
+                                                JOIN customers ON invoices.customer_id = customers.id
+                                       WHERE customers.name ILIKE ${`%${query}%`}
+                                          OR
+                                           customers.email ILIKE ${`%${query}%`}
+                                          OR
+                                           invoices.amount::text ILIKE ${`%${query}%`}
+                                          OR
+                                           invoices.date::text ILIKE ${`%${query}%`}
+                                          OR
+                                           invoices.status ILIKE ${`%${query}%`}
         `;
 
         const totalPages = Math.ceil(Number(count.rows[0].count) / ITEMS_PER_PAGE);
+
+        client.release()
+
         return totalPages;
     } catch (error) {
         console.error('Database Error:', error);
