@@ -27,10 +27,15 @@ export async function createInvoice(formData: FormData) {
     const amountInCents = amount * 100;
     const date = new Date().toISOString().split('T')[0]
 
-    await client.sql`
-        INSERT INTO invoices (customer_id, amount, status, date)
-        VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
-    `;
+    try {
+        await client.sql`
+            INSERT INTO invoices (customer_id, amount, status, date)
+            VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
+        `;
+    } catch (e) {
+        console.error('Error while creating invoice', e)
+    }
+
     client.release()
     revalidatePath('/dashboard/invoices');
     redirect('/dashboard/invoices');
@@ -47,13 +52,17 @@ export async function updateInvoice(id: string, formData: FormData) {
 
     const amountInCents = amount * 100;
     const client = await sql.connect();
-    await client.sql`
-        UPDATE invoices
-        SET customer_id = ${customerId},
-            amount      = ${amountInCents},
-            status      = ${status}
-        WHERE id = ${id}
-    `;
+    try {
+        await client.sql`
+            UPDATE invoices
+            SET customer_id = ${customerId},
+                amount      = ${amountInCents},
+                status      = ${status}
+            WHERE id = ${id}
+        `;
+    } catch (error) {
+        console.error(error);
+    }
 
     client.release()
     revalidatePath('/dashboard/invoices');
@@ -61,6 +70,8 @@ export async function updateInvoice(id: string, formData: FormData) {
 }
 
 export async function deleteInvoice(id: string) {
+    throw new Error('Some')
+
     const client = await sql.connect();
 
     await client.sql`DELETE
