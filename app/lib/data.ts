@@ -99,6 +99,53 @@ export async function fetchCardData() {
 
 const ITEMS_PER_PAGE = 6;
 
+export async function fetchInvoices(
+    query: string,
+    currentPage: number,) {
+    const client = await sql.connect()
+
+    const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+
+    try {
+        const invoices = await client.sql<InvoicesTable>`
+            SELECT invoices.id,
+                   invoices.amount,
+                   invoices.date,
+                   invoices.status,
+                   customers.name,
+                   customers.email,
+                   customers.image_url
+            FROM invoices
+                     JOIN customers ON invoices.customer_id = customers.id
+            WHERE customers.name ILIKE ${`%${query}%`}
+               OR
+                customers.email ILIKE ${`%${query}%`}
+               OR
+                invoices.amount::text ILIKE ${`%${query}%`}
+               OR
+                invoices.date::text ILIKE ${`%${query}%`}
+               OR
+                invoices.status ILIKE ${`%${query}%`}
+            ORDER BY invoices.date DESC
+                LIMIT ${ITEMS_PER_PAGE}
+            OFFSET ${offset}
+        `;
+
+        client.release()
+
+        return {
+            rows: invoices.rows,
+            offset: offset,
+            limits: ITEMS_PER_PAGE,
+            query,
+            currentPage
+        };
+    } catch (error) {
+        console.error('Database Error:', error);
+        throw new Error('Failed to fetch invoices.');
+    }
+}
+
 export async function fetchFilteredInvoices(
     query: string,
     currentPage: number,
@@ -172,7 +219,9 @@ export async function fetchInvoicesPages(query: string) {
 
 export async function fetchInvoiceById(id: string) {
     try {
-        const data = await sql<InvoiceForm>`
+        const client = await sql.connect();
+
+        const data = await client.sql<InvoiceForm>`
             SELECT invoices.id,
                    invoices.customer_id,
                    invoices.amount,
@@ -186,6 +235,8 @@ export async function fetchInvoiceById(id: string) {
             // Convert amount from cents to dollars
             amount: invoice.amount / 100,
         }));
+
+        client.release()
 
         return invoice[0];
     } catch (error) {
